@@ -1,6 +1,6 @@
 const amqp = require("amqplib");
 const { rabbitSettings, exchangeName } = require("../config/bd");
-
+// const { marcarNotificacionesComoProcesadas} = require("../controller/getverificacion");
 const queueBindings = {
     afiliado: "afiliado",
     prestador: "prestador",
@@ -9,7 +9,7 @@ const queueBindings = {
 
 
 // Función para consumir mensajes de una cola específica
-async function consumeQueue(queueName, routingKey, processMessage) {
+async function consumeQueue(queueName, routingKey) {
     try {
         const conn = await amqp.connect(rabbitSettings);
         console.log(`[CONSUMER] Conectado a RabbitMQ para la cola: ${queueName}`);
@@ -27,15 +27,29 @@ async function consumeQueue(queueName, routingKey, processMessage) {
         // Consumir mensajes
         canal.consume(queueName, async (message) => {
             if (message) {
-                const content = JSON.parse(message.content.toString());
-                console.log(`[CONSUMER] Mensaje recibido en ${queueName}:`, content);
+                try {
+                    const content = JSON.parse(message.content.toString());
+                    console.log(`[CONSUMER] Mensaje recibido en ${queueName}:`, content);
 
-                // Procesar mensaje con función personalizada
-                await processMessage(content);
+                    // Procesar mensaje directamente aquí
+                    if (queueName === "afiliado") {
+                        console.log("[AFILIADO] Procesando mensaje:", content);
+                        // Lógica específica para afiliados
+                    } else if (queueName === "prestador") {
+                        console.log("[PRESTADOR] Procesando mensaje:", content);
+                        // Lógica específica para prestadores
+                    } else if (queueName === "operador") {
+                        console.log("[OPERADOR] Procesando mensaje:", content);
+                        // Lógica específica para operadores
+                    }
 
-                // Confirmar recepción del mensaje
-                canal.ack(message);
-                console.log(`[CONSUMER] Mensaje procesado y eliminado de la cola: ${queueName}`);
+                    // Confirmar recepción del mensaje
+                    canal.ack(message);
+                    console.log(`[CONSUMER] Mensaje procesado y eliminado de la cola: ${queueName}`);
+                } catch (error) {
+                    console.error(`[CONSUMER] Error al procesar mensaje en ${queueName}:`, error);
+                    canal.nack(message, false, false); // Rechazar mensaje sin reenviarlo
+                }
             }
         });
     } catch (error) {
@@ -43,30 +57,11 @@ async function consumeQueue(queueName, routingKey, processMessage) {
     }
 }
 
-// Función para procesar mensajes de "afiliado"
-async function processAfiliadoMessage(message) {
-    console.log("Procesando mensaje de Afiliado:", message);
-    await marcarComoLeido(message.id);
-}
-
-// Función para procesar mensajes de "prestador"
-async function processPrestadorMessage(message) {
-    console.log("Procesando mensaje de Prestador:", message);
-    await marcarComoLeido(message.id);
-}
-
-// Función para procesar mensajes de "operador"
-async function processOperadorMessage(message) {
-    console.log("Procesando mensaje de Operador:", message);
-    await marcarComoLeido(message.id);
-}
-
-// Función para consumir colas y asociar los mensajes a su respectivo procesamiento
+// Función para consumir colas
 async function startConsuming() {
-    // Ejecutar consumidores para las tres colas
-    consumeQueue("afiliado", queueBindings.afiliado, processAfiliadoMessage);
-    consumeQueue("prestador", queueBindings.prestador, processPrestadorMessage);
-    consumeQueue("operador", queueBindings.operador, processOperadorMessage);
+    consumeQueue("afiliado", queueBindings.afiliado);
+    consumeQueue("prestador", queueBindings.prestador);
+    consumeQueue("operador", queueBindings.operador);
 }
 
 // Iniciar la función de consumo

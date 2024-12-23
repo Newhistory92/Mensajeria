@@ -1,26 +1,26 @@
-const {getNotificacionesPendientes} = require("../controller/getNotificaciones");
-const { marcarNotificacionesComoProcesadas} = require("../controller/getverificacion");
+const { procesarNotificaciones } = require("./productor");
+const { consumirCola } = require("./consumidor");
+const { applyBackoff } = require("../lib/backoff");
 
-async function procesarNotificaciones() {
+// Función principal
+(async function startApp() {
     try {
-        // Obtener notificaciones pendientes
-        const notificaciones = await getNotificacionesPendientes();
+        console.log("Iniciando servicio de notificaciones...");
 
-        if (notificaciones.length === 0) {
-            console.log("No hay notificaciones pendientes.");
-            return;
-        }
+        // Inicializar productor
+        setInterval(procesarNotificaciones, 60000);
 
-        // Publicar en RabbitMQ
-        await publicarNotificaciones(notificaciones);
+        // Inicializar consumidor para cada tipo de cola
+        consumirCola("afiliado");
+        consumirCola("prestador");
+        consumirCola("operador");
 
-        // Marcar como procesadas
-        const ids = notificaciones.map(n => n.id);
-        await marcarNotificacionesComoProcesadas(ids);
-    } catch (err) {
-        console.error("Error al procesar notificaciones:", err);
+        console.log("Servicio en ejecución.");
+    } catch (error) {
+        console.error("Error al iniciar la aplicación:", error);
+
+        // Aplicar backoff para reintentar si ocurre un error crítico
+        applyBackoff(() => startApp());
     }
-}
+})();
 
-// Ejecutar cada minuto
-setInterval(procesarNotificaciones, 60000);

@@ -1,5 +1,5 @@
 const {dbConfig} = require("../config/bd");
-
+const sql = require("mssql");
 async function marcarNotificacionesComoProcesadas(ids) {
     try {
         const pool = await sql.connect(dbConfig);
