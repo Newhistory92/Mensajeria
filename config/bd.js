@@ -1,18 +1,17 @@
 const sql = require("mssql");
-require("dotenv").config();
+
 
 // Configuración de la base de datos
 const dbConfig = {
-    user: "prueba23",
-    password:"Q1Tp2aXiMjN1*23",
-    server: "10.25.1.103",
-    database: "paginaobrasocial",
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_SERVER,
+    database: process.env.DB_NAME,
     options: {
       encrypt: false,
       trustServerCertificate: true,
     },
   };
-  console.log(process.env.DB_USER, process.env.DB_PASSWORD, process.env.DB_SERVER);
 
   async function testConnection() {
     try {

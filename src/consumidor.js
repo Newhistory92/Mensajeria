@@ -1,6 +1,7 @@
 const amqp = require("amqplib");
 const { rabbitSettings, exchangeName } = require("../config/bd");
-// const { marcarNotificacionesComoProcesadas} = require("../controller/getverificacion");
+const { updateNotificationStatus } = require("../controller/getNotificaciones");
+const { sendEmail } = require("./services/emailService");
 const queueBindings = {
     afiliado: "afiliado",
     prestador: "prestador",
@@ -30,19 +31,28 @@ async function consumeQueue(queueName, routingKey) {
                 try {
                     const content = JSON.parse(message.content.toString());
                     console.log(`[CONSUMER] Mensaje recibido en ${queueName}:`, content);
-
+                    await updateNotificationStatus(content.id, 'Recibido');
+                    console.log(`[CONSUMER] Estado actualizado a 'Recibido' para notificación ${content.id}`);
                     // Procesar mensaje directamente aquí
+                    let emailDestino;
                     if (queueName === "afiliado") {
+                        emailDestino = `afiliado${content.receptorId}@example.com`;
                         console.log("[AFILIADO] Procesando mensaje:", content);
                         // Lógica específica para afiliados
                     } else if (queueName === "prestador") {
+                        emailDestino = `prestador${content.receptorPrestadorId}@example.com`;
                         console.log("[PRESTADOR] Procesando mensaje:", content);
                         // Lógica específica para prestadores
                     } else if (queueName === "operador") {
+                        emailDestino = 'operador@example.com';
                         console.log("[OPERADOR] Procesando mensaje:", content);
                         // Lógica específica para operadores
                     }
-
+                    await sendEmail(
+                        emailDestino,
+                        content.titulo,
+                        content.contenido
+                    );
                     // Confirmar recepción del mensaje
                     canal.ack(message);
                     console.log(`[CONSUMER] Mensaje procesado y eliminado de la cola: ${queueName}`);
@@ -64,5 +74,4 @@ async function startConsuming() {
     consumeQueue("operador", queueBindings.operador);
 }
 
-// Iniciar la función de consumo
-startConsuming();
+module.exports = { startConsumer: startConsuming };

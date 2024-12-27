@@ -1,10 +1,9 @@
 const amqp = require("amqplib");
 const { backOff } = require("../lib/backoff");
-const {getNotificacionesPendientes} = require("../controller/getNotificaciones");
+const {getNotificacionesPendientes, updateNotificationStatus} = require("../controller/getNotificaciones");
 const { rabbitSettings, exchangeName, routingKeys } = require("../config/bd");
 const exchangeType = "direct"; // Exchange de tipo Direct
 
-const sentNotifications = new Set();
 
 async function configurarExchangeYColas(canal) {
     await canal.assertExchange(exchangeName, exchangeType);
@@ -12,7 +11,7 @@ async function configurarExchangeYColas(canal) {
         await canal.assertQueue(key);
         await canal.bindQueue(key, exchangeName, key);
     }
-    console.log("Exchange y colas configurados.");
+
 }
 async function connect() {
     try {
@@ -24,7 +23,7 @@ async function connect() {
 
         // Obtener notificaciones pendientes
         const notificaciones = await getNotificacionesPendientes();
-        console.log(notificaciones)
+
         if (!notificaciones.length) {
             console.log("No hay notificaciones pendientes.");
             conn.close();
@@ -33,11 +32,6 @@ async function connect() {
 
         // Enviar mensajes
         for (const notificacion of notificaciones) {
-            if (sentNotifications.has(notificacion.id)) {
-                console.log(`[PRODUCER] La notificación ${notificacion.id} ya ha sido enviada.`);
-                continue; // Si la notificación ya fue enviada, no la procesamos nuevamente
-            }
-
             const routingKey = notificacion.receptorId
                 ? routingKeys.afiliado
                 : notificacion.receptorPrestadorId
@@ -56,16 +50,44 @@ async function connect() {
                 const currentTime = new Date();
                 currentTime.setHours(currentTime.getHours() - 3);
                 console.log("[PRODUCER] Hora actual:", currentTime);
-                
+
                 const scheduledTime = new Date(notificacion.scheduledAt);
-                console.log("[PRODUCER] Hora programada:", scheduledTime);
-                const delay = scheduledTime - currentTime;
+                const scheduledTimeArgentina = new Date(
+                    scheduledTime.toLocaleString('en-US', {
+                        timeZone: 'America/Argentina/Buenos_Aires',
+                        hour12: false,
+                    })
+                );
+                console.log("[PRODUCER] Hora programada:", scheduledTimeArgentina);
+
+                const delay = scheduledTimeArgentina - currentTime;
 
                 if (delay > 0) {
                     // Si la notificación está programada para el futuro, programamos su envío
                     console.log(`[PRODUCER] Mensaje programado para ${notificacion.scheduledAt}`);
-                    setTimeout(() => {
-                        canal.publish(
+                    setTimeout(async () => {
+                        try {
+                            await canal.publish(
+                                exchangeName,
+                                routingKey,
+                                Buffer.from(JSON.stringify(msg)),
+                                { persistent: true }
+                            );
+                            console.log(`[PRODUCER] Mensaje enviado a ${routingKey}:`, msg);
+
+                            // Actualizamos el estado a "Enviado"
+                            await updateNotificationStatus(notificacion.id, 'Enviado');
+                        } catch (error) {
+                            console.error(
+                                `[PRODUCER] Error al enviar mensaje programado ${notificacion.id}:`,
+                                error
+                            );
+                        }
+                    }, delay);
+                } else {
+                    // Si la notificación está lista para ser enviada, la enviamos inmediatamente
+                    try {
+                        await canal.publish(
                             exchangeName,
                             routingKey,
                             Buffer.from(JSON.stringify(msg)),
@@ -73,21 +95,14 @@ async function connect() {
                         );
                         console.log(`[PRODUCER] Mensaje enviado a ${routingKey}:`, msg);
 
-                        // Marcamos la notificación como enviada
-                        sentNotifications.add(notificacion.id);
-                    }, delay);
-                } else {
-                    // Si la notificación está lista para ser enviada, la enviamos inmediatamente
-                    canal.publish(
-                        exchangeName,
-                        routingKey,
-                        Buffer.from(JSON.stringify(msg)),
-                        { persistent: true }
-                    );
-                    console.log(`[PRODUCER] Mensaje enviado a ${routingKey}:`, msg);
-
-                    // Marcamos la notificación como enviada
-                    sentNotifications.add(notificacion.id);
+                        // Actualizamos el estado a "Enviado"
+                        await updateNotificationStatus(notificacion.id, 'Enviado');
+                    } catch (error) {
+                        console.error(
+                            `[PRODUCER] Error al enviar mensaje inmediato ${notificacion.id}:`,
+                            error
+                        );
+                    }
                 }
             } else {
                 console.error("Mensaje con receptor no reconocido:", notificacion);
@@ -98,6 +113,7 @@ async function connect() {
         throw error;
     }
 }
+
 setInterval(async () => {
     const currentTime = new Date();
     currentTime.setHours(currentTime.getHours() - 3);
@@ -118,6 +134,6 @@ const startProducerWithBackOff = backOff(
     }
 );
 
-// Iniciar el productor con BackOff
-startProducerWithBackOff();
 
+
+module.exports = { startProducer: startProducerWithBackOff };
