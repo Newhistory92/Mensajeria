@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getNotificacionesPendientes, updateNotificationStatus, updateNotificationLeido } = require('../../controller/getNotificaciones');
+const { getNotificacionesPendientes, updateNotificationStatus, updateNotificationLeido } = require('../controller/getNotificaciones.js');
 
 // Obtener todas las notificaciones pendientes
 router.get('/pending', async (req, res, next) => {
@@ -40,6 +40,23 @@ router.put('/:id/read', async (req, res, next) => {
             message: 'Notificación marcada como leída',
             timestamp: new Date().toISOString()
         });
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Ruta para previsualizar email
+router.get('/preview-email', async (req, res, next) => {
+    try {
+        const { previewEmail } = require('../services/emailPreview');
+        
+        const testData = {
+            titulo: "Email de prueba",
+            contenido: "<p>Este es un email de prueba para verificar los estilos.</p>"
+        };
+
+        const previewPath = await previewEmail(testData.titulo, testData.contenido);
+        res.sendFile(previewPath);
     } catch (error) {
         next(error);
     }

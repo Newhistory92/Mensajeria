@@ -1,7 +1,7 @@
 const amqp = require("amqplib");
-const { backOff } = require("../lib/backoff");
-const {getNotificacionesPendientes, updateNotificationStatus} = require("../controller/getNotificaciones");
-const { rabbitSettings, exchangeName, routingKeys } = require("../config/bd");
+const { backOff } = require("./lib/backoff");
+const {getNotificacionesPendientes, updateNotificationStatus} = require("./controller/getNotificaciones.js");
+const { rabbitSettings, exchangeName, routingKeys } = require("./config/bd");
 const exchangeType = "direct"; // Exchange de tipo Direct
 
 

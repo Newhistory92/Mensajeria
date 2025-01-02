@@ -1,6 +1,6 @@
-import { Img } from "@react-email/components";
-import styles from './Header.module.css';
-
+const { Img }= require ("@react-email/components");
+const  styles = require('./Header.module.css') 
+const React = require('react');
 function Header({ logoUrl }) {
   return (
     <div className={styles.header}>
@@ -9,4 +9,4 @@ function Header({ logoUrl }) {
   );
 }
 
-module.exports = Header;
+module.exports.Header = Header;

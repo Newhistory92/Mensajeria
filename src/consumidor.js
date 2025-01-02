@@ -1,6 +1,6 @@
 const amqp = require("amqplib");
-const { rabbitSettings, exchangeName } = require("../config/bd");
-const { updateNotificationStatus } = require("../controller/getNotificaciones");
+const { rabbitSettings, exchangeName } = require("./config/bd");
+const { updateNotificationStatus } = require("./controller/getNotificaciones.js");
 const { sendEmail } = require("./services/emailService");
 const queueBindings = {
     afiliado: "afiliado",
@@ -31,34 +31,40 @@ async function consumeQueue(queueName, routingKey) {
                 try {
                     const content = JSON.parse(message.content.toString());
                     console.log(`[CONSUMER] Mensaje recibido en ${queueName}:`, content);
+                    
+                    // Actualizar estado a Recibido
                     await updateNotificationStatus(content.id, 'Recibido');
                     console.log(`[CONSUMER] Estado actualizado a 'Recibido' para notificación ${content.id}`);
-                    // Procesar mensaje directamente aquí
-                    let emailDestino;
+
+                    // Procesar mensaje según el tipo de cola
                     if (queueName === "afiliado") {
-                        emailDestino = `afiliado${content.receptorId}@example.com`;
                         console.log("[AFILIADO] Procesando mensaje:", content);
-                        // Lógica específica para afiliados
+                        await sendEmail(
+                            content.mail,
+                            content.titulo,
+                            content.contenido
+                        );
                     } else if (queueName === "prestador") {
-                        emailDestino = `prestador${content.receptorPrestadorId}@example.com`;
                         console.log("[PRESTADOR] Procesando mensaje:", content);
-                        // Lógica específica para prestadores
+                        await sendEmail(
+                            content.mail,
+                            content.titulo,
+                            content.contenido
+                        );
                     } else if (queueName === "operador") {
-                        emailDestino = 'operador@example.com';
                         console.log("[OPERADOR] Procesando mensaje:", content);
-                        // Lógica específica para operadores
+                        await sendEmail(
+                            content.mail,
+                            content.titulo,
+                            content.contenido
+                        );
                     }
-                    await sendEmail(
-                        emailDestino,
-                        content.titulo,
-                        content.contenido
-                    );
-                    // Confirmar recepción del mensaje
+
                     canal.ack(message);
                     console.log(`[CONSUMER] Mensaje procesado y eliminado de la cola: ${queueName}`);
                 } catch (error) {
                     console.error(`[CONSUMER] Error al procesar mensaje en ${queueName}:`, error);
-                    canal.nack(message, false, false); // Rechazar mensaje sin reenviarlo
+                    canal.nack(message, false, false);
                 }
             }
         });

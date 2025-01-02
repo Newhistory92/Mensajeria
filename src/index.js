@@ -2,7 +2,17 @@ require('dotenv').config();
 const createServer = require('./server');
 const { startProducer } = require('./productor');
 const { startConsumer } = require('./consumidor');
-
+require('@babel/register')({
+    extensions: ['.js', '.jsx'],
+  });
+  require('css-modules-require-hook')({
+    generateScopedName: '[name]__[local]___[hash:base64:5]',
+    preprocessCss: (css, filepath) => css,
+    camelCase: true,
+    devMode: process.env.NODE_ENV !== 'production'
+  });
+  
+  
 const PORT = process.env.PORT || 3005;
 
 async function startService() {

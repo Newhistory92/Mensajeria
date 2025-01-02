@@ -1,11 +1,11 @@
-const { transporter } = require('.../config/mail');
+const { transporter } = require('../config/mail');
 const { render } = require('@react-email/render');
-const EmailTemplate = require('.../templates/EmailTemplate.jsx');
+const NotificationEmail = require('../templates/EmailTemplate');
 
 async function sendEmail(to, titulo, contenido) {
     try {
         const emailHtml = render
-        (EmailTemplate(
+        (NotificationEmail(
         { titulo,
         contenido,
         fecha: new Date().toLocaleDateString(),}));

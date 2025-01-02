@@ -1,6 +1,6 @@
-import { Text } from "@react-email/components";
-import styles from './Content.module.css';
-
+const { Text } = require ("@react-email/components");
+const styles = require('./Content.module.css');
+const React = require('react');
 function Content({ titulo, contenido, fecha }) {
   const formattedDate = new Intl.DateTimeFormat("es-AR", {
     dateStyle: "long",
@@ -19,4 +19,4 @@ function Content({ titulo, contenido, fecha }) {
   );
 }
 
-module.exports = Content;
+module.exports.Content = Content;
