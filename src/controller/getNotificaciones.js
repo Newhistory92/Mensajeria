@@ -7,38 +7,53 @@ async function getNotificacionesPendientes() {
         const result = await pool.request()
             .query(`
                 SELECT 
-                    id, 
-                    titulo, 
-                    contenido, 
-                    receptorId, 
-                    receptorPrestadorId, 
+                    n.id, 
+                    n.titulo, 
+                    n.mail,
+                    n.receptorId, 
+                    n.receptorPrestadorId,
+                    n.receptorOperadorId,
                     CASE 
-                        WHEN scheduledAt IS NULL THEN NULL
-                        ELSE scheduledAt
+                        WHEN n.scheduledAt IS NULL THEN NULL
+                        ELSE n.scheduledAt
                     END as scheduledAt,
-                    GETDATE() as CurrentServerTime
-                FROM Notificacion
-                WHERE status = 'No_leido'
-                AND tipo NOT IN ('Enviado', 'Recibido')
+                    GETDATE() as CurrentServerTime,
+                    -- Obtener el nombre del receptor según la tabla correspondiente
+                    CASE
+                        WHEN n.receptorId IS NOT NULL THEN a.name
+                        WHEN n.receptorPrestadorId IS NOT NULL THEN p.name 
+                        WHEN n.receptorOperadorId IS NOT NULL THEN o.name
+                        ELSE NULL
+                    END as receptorName
+                FROM Notificacion n
+                -- Left joins para obtener los nombres
+                LEFT JOIN Afiliado a ON n.receptorId = a.id
+                LEFT JOIN Prestador p ON n.receptorPrestadorId = p.id
+                LEFT JOIN Operador o ON n.receptorOperadorId = o.id
+                WHERE n.status = 'No_leido'
+                AND n.tipo NOT IN ('Enviado', 'Recibido')
                 AND (
-                    scheduledAt IS NULL
+                    n.scheduledAt IS NULL
                     OR
-                    CONVERT(DATE, scheduledAt) = CONVERT(DATE, GETDATE())
+                    CONVERT(DATE, n.scheduledAt) = CONVERT(DATE, GETDATE())
                 )
                 ORDER BY 
                     CASE 
-                        WHEN scheduledAt IS NULL THEN 0 
+                        WHEN n.scheduledAt IS NULL THEN 0 
                         ELSE 1 
                     END,
-                    scheduledAt ASC;
+                    n.scheduledAt ASC;
             `);
 
+           
         return result.recordset;
     } catch (err) {
         console.error("Error al obtener notificaciones:", err);
         throw err;
     }
 }
+
+
 async function updateNotificationStatus(id,tipo) {
     try {
         const pool = await sql.connect(dbConfig);

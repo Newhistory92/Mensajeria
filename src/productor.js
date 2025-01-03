@@ -23,7 +23,6 @@ async function connect() {
 
         // Obtener notificaciones pendientes
         const notificaciones = await getNotificacionesPendientes();
-
         if (!notificaciones.length) {
             console.log("No hay notificaciones pendientes.");
             conn.close();
@@ -45,6 +44,9 @@ async function connect() {
                     contenido: notificacion.contenido,
                     receptorId: notificacion.receptorId,
                     receptorPrestadorId: notificacion.receptorPrestadorId,
+                    receptorOperadorId: notificacion.receptorOperadorId,
+                    receptorName: notificacion.receptorName,
+                    mail: notificacion.mail,
                 };
 
                 const currentTime = new Date();

@@ -107,7 +107,10 @@ function _connect() {
                     titulo: notificacion.titulo,
                     contenido: notificacion.contenido,
                     receptorId: notificacion.receptorId,
-                    receptorPrestadorId: notificacion.receptorPrestadorId
+                    receptorPrestadorId: notificacion.receptorPrestadorId,
+                    receptorOperadorId: notificacion.receptorOperadorId,
+                    receptorName: notificacion.receptorName,
+                    mail: notificacion.mail
                   };
                   currentTime = new Date();
                   currentTime.setHours(currentTime.getHours() - 3);

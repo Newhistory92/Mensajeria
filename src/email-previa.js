@@ -10,8 +10,9 @@ const path = require('path');
             // Espera la resolución de render
             const emailHtml = await render(
                 NotificationEmail({
-                    titulo,
-                    contenido,
+                    userFirstName: "Emiliano",
+                    message: "Tienes un nuevo mensaje en tu cuenta de Obra Social Provincia.",
+                    titulo:" Resolucion 1234/2021",
                     fecha: new Date(),
                     actionUrl: 'http://localhost:3002'
                 })

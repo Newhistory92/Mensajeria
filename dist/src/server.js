@@ -24,7 +24,7 @@ var createServer = function createServer() {
   app.use(express.urlencoded({
     extended: true
   }));
-  app.use('/static', express["static"](path.join(__dirname, '../public/static')));
+  app.use('/static', express["static"](path.join(__dirname, 'static')));
   app.use('/preview', express["static"](path.join(__dirname, 'preview')));
   app.use(function (req, res, next) {
     res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'");

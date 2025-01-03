@@ -82,7 +82,7 @@ function _consumeQueue() {
                     }
                     console.log("[AFILIADO] Procesando mensaje:", content);
                     _context.next = 11;
-                    return sendEmail(content.mail, content.titulo, content.contenido);
+                    return sendEmail(content.mail, content.titulo, content.receptorName);
                   case 11:
                     _context.next = 23;
                     break;
@@ -93,7 +93,7 @@ function _consumeQueue() {
                     }
                     console.log("[PRESTADOR] Procesando mensaje:", content);
                     _context.next = 17;
-                    return sendEmail(content.mail, content.titulo, content.contenido);
+                    return sendEmail(content.mail, content.titulo, content.receptorName);
                   case 17:
                     _context.next = 23;
                     break;
@@ -104,7 +104,7 @@ function _consumeQueue() {
                     }
                     console.log("[OPERADOR] Procesando mensaje:", content);
                     _context.next = 23;
-                    return sendEmail(content.mail, content.titulo, content.contenido);
+                    return sendEmail(content.mail, content.titulo, content.receptorName);
                   case 23:
                     canal.ack(message);
                     console.log("[CONSUMER] Mensaje procesado y eliminado de la cola: ".concat(queueName));

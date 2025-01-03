@@ -42,21 +42,21 @@ async function consumeQueue(queueName, routingKey) {
                         await sendEmail(
                             content.mail,
                             content.titulo,
-                            content.contenido
+                            content.receptorName
                         );
                     } else if (queueName === "prestador") {
                         console.log("[PRESTADOR] Procesando mensaje:", content);
                         await sendEmail(
                             content.mail,
                             content.titulo,
-                            content.contenido
+                            content.receptorName
                         );
                     } else if (queueName === "operador") {
                         console.log("[OPERADOR] Procesando mensaje:", content);
                         await sendEmail(
                             content.mail,
                             content.titulo,
-                            content.contenido
+                            content.receptorName
                         );
                     }
 

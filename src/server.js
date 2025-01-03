@@ -6,6 +6,8 @@ const helmet = require('helmet');
 const errorHandler = require('./middleware/errorHandler');
 const notificationRoutes = require('./routes/notificaciones');
 const { previewEmail } = require('./email-previa');
+
+
 const createServer = () => {
     const app = express();
 
@@ -15,7 +17,10 @@ const createServer = () => {
     app.use(morgan('dev')); // Logging
     app.use(express.json()); // Parser JSON
     app.use(express.urlencoded({ extended: true }));
-    app.use('/static', express.static(path.join(__dirname, '../public/static')));
+    
+ 
+    
+    app.use('/static', express.static(path.join(__dirname, 'static')));
     app.use('/preview', express.static(path.join(__dirname, 'preview')));
     app.use((req, res, next) => {
         res.setHeader(

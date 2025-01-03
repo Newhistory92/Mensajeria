@@ -9,43 +9,66 @@ var _require = require('../config/mail'),
 var _require2 = require('@react-email/render'),
   render = _require2.render;
 var NotificationEmail = require('../templates/EmailTemplate');
-function sendEmail(_x, _x2, _x3) {
+function sendEmail(_x, _x2, _x3, _x4) {
   return _sendEmail.apply(this, arguments);
 }
 function _sendEmail() {
-  _sendEmail = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(to, titulo, contenido) {
-    var emailHtml, mailOptions, info;
+  _sendEmail = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(to, titulo, receptorName, mail) {
+    var destinatario, emailHtml, mailOptions, info;
     return _regeneratorRuntime().wrap(function _callee$(_context) {
       while (1) switch (_context.prev = _context.next) {
         case 0:
           _context.prev = 0;
-          emailHtml = render(NotificationEmail({
-            titulo: titulo,
-            contenido: contenido,
-            fecha: new Date().toLocaleDateString()
+          // Validación estricta del email
+          destinatario = mail || to;
+          if (!(!destinatario || typeof destinatario !== 'string' || !destinatario.includes('@'))) {
+            _context.next = 4;
+            break;
+          }
+          throw new Error("Email inv\xE1lido: ".concat(destinatario));
+        case 4:
+          _context.next = 6;
+          return render(NotificationEmail({
+            userFirstName: receptorName,
+            message: "Tienes un nuevo mensaje en tu cuenta de Obra Social Provincia",
+            titulo: titulo
           }));
+        case 6:
+          emailHtml = _context.sent;
+          // Construir mailOptions de manera más explícita
           mailOptions = {
             from: process.env.SMTP_FROM,
-            to: to,
+            to: destinatario.trim(),
             subject: titulo,
-            html: emailHtml
+            html: emailHtml,
+            envelope: {
+              from: process.env.SMTP_FROM,
+              to: destinatario.trim()
+            }
           };
-          _context.next = 5;
+          _context.next = 10;
           return transporter.sendMail(mailOptions);
-        case 5:
-          info = _context.sent;
-          console.log('[EMAIL] Mensaje enviado:', info.messageId);
-          return _context.abrupt("return", info);
         case 10:
-          _context.prev = 10;
-          _context.t0 = _context["catch"](0);
-          console.error('[EMAIL] Error al enviar email:', _context.t0);
-          throw _context.t0;
+          info = _context.sent;
+          return _context.abrupt("return", info);
         case 14:
+          _context.prev = 14;
+          _context.t0 = _context["catch"](0);
+          // Log detallado del error
+          console.error('[EMAIL] Error detallado:', {
+            message: _context.t0.message,
+            code: _context.t0.code,
+            command: _context.t0.command,
+            stack: _context.t0.stack,
+            responseCode: _context.t0.responseCode,
+            response: _context.t0.response
+          });
+          throw _context.t0;
+        case 18:
         case "end":
           return _context.stop();
       }
-    }, _callee, null, [[0, 10]]);
+    }, _callee, null, [[0, 14]]);
   }));
   return _sendEmail.apply(this, arguments);
 }

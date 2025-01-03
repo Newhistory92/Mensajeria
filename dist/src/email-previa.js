@@ -22,8 +22,9 @@ function _previewEmail() {
           _context.prev = 0;
           _context.next = 3;
           return render(NotificationEmail({
-            titulo: titulo,
-            contenido: contenido,
+            userFirstName: "Emiliano",
+            message: "Tienes un nuevo mensaje en tu cuenta de Obra Social Provincia.",
+            titulo: " Resolucion 1234/2021",
             fecha: new Date(),
             actionUrl: 'http://localhost:3002'
           }));
