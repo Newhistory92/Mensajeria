@@ -26,7 +26,8 @@ function NotificationEmail(_ref) {
   var userFirstName = _ref.userFirstName,
     loginDate = _ref.loginDate,
     message = _ref.message,
-    titulo = _ref.titulo;
+    titulo = _ref.titulo,
+    contenido = _ref.contenido;
   var formattedDate = new Intl.DateTimeFormat("es-AR", {
     dateStyle: "long",
     timeStyle: "short"
@@ -69,11 +70,14 @@ function NotificationEmail(_ref) {
     style: _objectSpread(_objectSpread({}, paragraph), {}, {
       marginTop: -5
     })
-  }, /*#__PURE__*/React.createElement("b", null, "Referencia: "), titulo), /*#__PURE__*/React.createElement(Text, {
+  }, /*#__PURE__*/React.createElement("b", null, "Referencia: "), titulo), /*#__PURE__*/React.createElement("div", {
     style: _objectSpread(_objectSpread({}, paragraph), {}, {
       marginTop: -5
-    })
-  }, "Ingresa a nuestra web con tu cuenta de usuario y obt\xE9n m\xE1s informaci\xF3n."), /*#__PURE__*/React.createElement(Text, {
+    }),
+    dangerouslySetInnerHTML: {
+      __html: contenido
+    }
+  }), /*#__PURE__*/React.createElement(Text, {
     style: paragraph
   }, /*#__PURE__*/React.createElement("b", null, "Aviso: "), formattedDate), /*#__PURE__*/React.createElement(Text, {
     style: {

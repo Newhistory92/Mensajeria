@@ -19,7 +19,7 @@ function NotificationEmail({
   loginDate,
   message,
   titulo,
-
+  contenido,
 }) {
   const formattedDate = new Intl.DateTimeFormat("es-AR", {
     dateStyle: "long",
@@ -72,9 +72,10 @@ function NotificationEmail({
                   <b>Referencia: </b>
                   {titulo}
                 </Text>
-                <Text style={{ ...paragraph, marginTop: -5 }}>
-                Ingresa a nuestra web con tu cuenta de usuario y obtén más información.
-                </Text>
+                <div
+                 style={{ ...paragraph, marginTop: -5 }}
+                 dangerouslySetInnerHTML={{ __html: contenido }}
+                  />
                   <Text style={paragraph}>
                     <b>Aviso: </b>
                     {formattedDate}

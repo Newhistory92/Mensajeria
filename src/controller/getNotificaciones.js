@@ -9,6 +9,7 @@ async function getNotificacionesPendientes() {
                 SELECT 
                     n.id, 
                     n.titulo, 
+                    n.contenido,
                     n.mail,
                     n.receptorId, 
                     n.receptorPrestadorId,

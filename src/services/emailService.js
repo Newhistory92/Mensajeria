@@ -1,13 +1,11 @@
 const { transporter } = require('../config/mail');
 const { render } = require('@react-email/render');
 const NotificationEmail = require('../templates/EmailTemplate');
-
-async function sendEmail(to, titulo, receptorName, mail) {
+async function sendEmail(mail, titulo, receptorName, contenido) {
     try {
         // Validación estricta del email
         const destinatario = mail || to;
         
-
         if (!destinatario || typeof destinatario !== 'string' || !destinatario.includes('@')) {
             throw new Error(`Email inválido: ${destinatario}`);
         }
@@ -15,8 +13,10 @@ async function sendEmail(to, titulo, receptorName, mail) {
         const emailHtml = await render(
             NotificationEmail({
                 userFirstName: receptorName,
+                loginDate: new Date(),
                 message: "Tienes un nuevo mensaje en tu cuenta de Obra Social Provincia",
                 titulo: titulo,
+                contenido: contenido
             })
         );
 
@@ -31,7 +31,7 @@ async function sendEmail(to, titulo, receptorName, mail) {
                 to: destinatario.trim()
             }
         };
-
+      
 
         const info = await transporter.sendMail(mailOptions);
        

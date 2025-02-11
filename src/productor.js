@@ -2,42 +2,131 @@ const amqp = require("amqplib");
 const { backOff } = require("./lib/backoff");
 const {getNotificacionesPendientes, updateNotificationStatus} = require("./controller/getNotificaciones.js");
 const { rabbitSettings, exchangeName, routingKeys } = require("./config/bd");
-const exchangeType = "direct"; // Exchange de tipo Direct
-
-
-async function configurarExchangeYColas(canal) {
-    await canal.assertExchange(exchangeName, exchangeType);
-    for (const key of Object.values(routingKeys)) {
-        await canal.assertQueue(key);
-        await canal.bindQueue(key, exchangeName, key);
+ 
+class MessageProducer {
+    constructor() {
+        this.connection = null;
+        this.channel = null;
+        this.isConnected = false;
+        this.pendingMessages = new Set();
     }
 
-}
-async function connect() {
-    try {
-        const conn = await amqp.connect(rabbitSettings);
-        console.log("¡Conexión exitosa!");
-
-        const canal = await conn.createChannel();
-        await configurarExchangeYColas(canal);
-
-        // Obtener notificaciones pendientes
-        const notificaciones = await getNotificacionesPendientes();
-        if (!notificaciones.length) {
-            console.log("No hay notificaciones pendientes.");
-            conn.close();
-            return;
+    async configurarExchangeYColas(canal) {
+        await canal.assertExchange(exchangeName, "direct");
+        for (const key of Object.values(routingKeys)) {
+            await canal.assertQueue(key);
+            await canal.bindQueue(key, exchangeName, key);
         }
+    }
 
-        // Enviar mensajes
-        for (const notificacion of notificaciones) {
-            const routingKey = notificacion.receptorId
+    async connect() {
+        try {
+            if (!this.connection) {
+                this.connection = await amqp.connect(rabbitSettings);
+                console.log("¡Conexión exitosa!");
+
+                this.connection.on("error", (err) => {
+                    console.error("[PRODUCER] Conexión error:", err);
+                    this.isConnected = false;
+                });
+
+                this.connection.on("close", () => {
+                    console.log("[PRODUCER] Conexión cerrada");
+                    this.isConnected = false;
+                    // Intentar reconectar después de un delay
+                    setTimeout(() => this.reconnect(), 5000);
+                });
+            }
+
+            if (!this.channel) {
+                this.channel = await this.connection.createChannel();
+                await this.configurarExchangeYColas(this.channel);
+                this.isConnected = true;
+
+                // Reenviar mensajes pendientes después de reconectar
+                if (this.pendingMessages.size > 0) {
+                    console.log("[PRODUCER] Reenviando mensajes pendientes...");
+                    await this.resendPendingMessages();
+                }
+            }
+        } catch (error) {
+            console.error("[PRODUCER] Error de conexión:", error);
+            this.isConnected = false;
+            throw error;
+        }
+    }
+
+    async reconnect() {
+        try {
+            this.connection = null;
+            this.channel = null;
+            await this.connect();
+        } catch (error) {
+            console.error("[PRODUCER] Error en reconexión:", error);
+        }
+    }
+
+    async sendMessage(routingKey, msg) {
+        try {
+            if (!this.isConnected) {
+                await this.connect();
+            }
+
+            await this.channel.publish(
+                exchangeName,
+                routingKey,
+                Buffer.from(JSON.stringify(msg)),
+                { persistent: true }
+            );
+
+            console.log(`[PRODUCER] Mensaje enviado a ${routingKey}:`, msg);
+            await updateNotificationStatus(msg.id, 'Enviado');
+            this.pendingMessages.delete(JSON.stringify(msg));
+        } catch (error) {
+            console.error(`[PRODUCER] Error al enviar mensaje:`, error);
+            this.pendingMessages.add(JSON.stringify(msg));
+            throw error;
+        }
+    }
+
+    async resendPendingMessages() {
+        for (const msgStr of this.pendingMessages) {
+            const msg = JSON.parse(msgStr);
+            const routingKey = msg.receptorId
                 ? routingKeys.afiliado
-                : notificacion.receptorPrestadorId
+                : msg.receptorPrestadorId
                 ? routingKeys.prestador
                 : routingKeys.operador;
 
-            if (routingKey) {
+            try {
+                await this.sendMessage(routingKey, msg);
+                console.log(`[PRODUCER] Mensaje pendiente reenviado:`, msg);
+            } catch (error) {
+                console.error(`[PRODUCER] Error al reenviar mensaje pendiente:`, error);
+            }
+        }
+    }
+
+    async processNotifications() {
+        try {
+            const notificaciones = await getNotificacionesPendientes();
+            if (!notificaciones.length) {
+                console.log("No hay notificaciones pendientes.");
+                return;
+            }
+
+            for (const notificacion of notificaciones) {
+                const routingKey = notificacion.receptorId
+                    ? routingKeys.afiliado
+                    : notificacion.receptorPrestadorId
+                    ? routingKeys.prestador
+                    : routingKeys.operador;
+
+                if (!routingKey) {
+                    console.error("Mensaje con receptor no reconocido:", notificacion);
+                    continue;
+                }
+
                 const msg = {
                     id: notificacion.id,
                     titulo: notificacion.titulo,
@@ -51,91 +140,51 @@ async function connect() {
 
                 const currentTime = new Date();
                 currentTime.setHours(currentTime.getHours() - 3);
-                console.log("[PRODUCER] Hora actual:", currentTime);
-
-                const scheduledTime = new Date(notificacion.scheduledAt);
-                const scheduledTimeArgentina = new Date(
-                    scheduledTime.toLocaleString('en-US', {
-                        timeZone: 'America/Argentina/Buenos_Aires',
-                        hour12: false,
-                    })
-                );
-                console.log("[PRODUCER] Hora programada:", scheduledTimeArgentina);
-
-                const delay = scheduledTimeArgentina - currentTime;
-
-                if (delay > 0) {
-                    // Si la notificación está programada para el futuro, programamos su envío
-                    console.log(`[PRODUCER] Mensaje programado para ${notificacion.scheduledAt}`);
-                    setTimeout(async () => {
-                        try {
-                            await canal.publish(
-                                exchangeName,
-                                routingKey,
-                                Buffer.from(JSON.stringify(msg)),
-                                { persistent: true }
-                            );
-                            console.log(`[PRODUCER] Mensaje enviado a ${routingKey}:`, msg);
-
-                            // Actualizamos el estado a "Enviado"
-                            await updateNotificationStatus(notificacion.id, 'Enviado');
-                        } catch (error) {
-                            console.error(
-                                `[PRODUCER] Error al enviar mensaje programado ${notificacion.id}:`,
-                                error
-                            );
-                        }
-                    }, delay);
-                } else {
-                    // Si la notificación está lista para ser enviada, la enviamos inmediatamente
-                    try {
-                        await canal.publish(
-                            exchangeName,
-                            routingKey,
-                            Buffer.from(JSON.stringify(msg)),
-                            { persistent: true }
-                        );
-                        console.log(`[PRODUCER] Mensaje enviado a ${routingKey}:`, msg);
-
-                        // Actualizamos el estado a "Enviado"
-                        await updateNotificationStatus(notificacion.id, 'Enviado');
-                    } catch (error) {
-                        console.error(
-                            `[PRODUCER] Error al enviar mensaje inmediato ${notificacion.id}:`,
-                            error
-                        );
+                const scheduledTime = notificacion.scheduledAt ? new Date(notificacion.scheduledAt) : null;
+                
+                if (scheduledTime) {
+                    const delay = scheduledTime - currentTime;
+                    if (delay > 0) {
+                        setTimeout(() => this.sendMessage(routingKey, msg), delay);
+                        console.log(`[PRODUCER] Mensaje programado para ${scheduledTime}`);
+                    } else {
+                        await this.sendMessage(routingKey, msg);
                     }
+                } else {
+                    await this.sendMessage(routingKey, msg);
                 }
-            } else {
-                console.error("Mensaje con receptor no reconocido:", notificacion);
             }
+        } catch (error) {
+            console.error("[PRODUCER] Error procesando notificaciones:", error);
+            throw error;
         }
-    } catch (error) {
-        console.error("Error durante la conexión o envío de mensajes:", error);
-        throw error;
     }
 }
 
-setInterval(async () => {
-    const currentTime = new Date();
-    currentTime.setHours(currentTime.getHours() - 3);
-    console.log("[PRODUCER] Revisando notificaciones... ", currentTime);
-    await connect();
-}, 60000);
+const producer = new MessageProducer();
 
-// Implementación de BackOff
+// Implementación de BackOff con la nueva clase
 const startProducerWithBackOff = backOff(
-    1, // Tiempo inicial en segundos
-    64, // Tiempo máximo en segundos
-    connect,
+    1,
+    64,
+    async () => {
+        await producer.connect();
+        await producer.processNotifications();
+    },
     () => console.log("[BACKOFF] Conexión establecida y mensajes enviados."),
     (error) => console.error("[BACKOFF] Error al conectar:", error),
     (finalError) => {
         console.error("[BACKOFF] Fallo crítico:", finalError);
-        process.exit(1); // Salida en caso de fallo crítico
+        process.exit(1);
     }
 );
 
-
+// Revisar notificaciones periódicamente
+setInterval(async () => {
+    const currentTime = new Date();
+    currentTime.setHours(currentTime.getHours() - 3);
+    console.log("[PRODUCER] Revisando notificaciones... ", currentTime);
+    await producer.processNotifications();
+}, 60000);
 
 module.exports = { startProducer: startProducerWithBackOff };

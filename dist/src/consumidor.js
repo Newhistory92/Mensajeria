@@ -62,7 +62,7 @@ function _consumeQueue() {
                 while (1) switch (_context.prev = _context.next) {
                   case 0:
                     if (!message) {
-                      _context.next = 31;
+                      _context.next = 19;
                       break;
                     }
                     _context.prev = 1;
@@ -76,50 +76,35 @@ function _consumeQueue() {
                     console.log("[CONSUMER] Estado actualizado a 'Recibido' para notificaci\xF3n ".concat(content.id));
 
                     // Procesar mensaje según el tipo de cola
-                    if (!(queueName === "afiliado")) {
-                      _context.next = 13;
+                    // console.log('[CONSUMER] Preparando envío de email:', {
+                    //     mail: content.mail,
+                    //     titulo: content.titulo,
+                    //     receptorName: content.receptorName,
+                    //     contenido: content.contenido
+                    // });
+                    if (!(queueName === "afiliado" || queueName === "prestador" || queueName === "operador")) {
+                      _context.next = 11;
                       break;
                     }
-                    console.log("[AFILIADO] Procesando mensaje:", content);
-                    _context.next = 11;
-                    return sendEmail(content.mail, content.titulo, content.receptorName);
+                    _context.next = 10;
+                    return sendEmail(content.mail, content.titulo, content.receptorName, content.contenido);
+                  case 10:
+                    console.log("[".concat(queueName.toUpperCase(), "] Email enviado exitosamente a ").concat(content.mail));
                   case 11:
-                    _context.next = 23;
-                    break;
-                  case 13:
-                    if (!(queueName === "prestador")) {
-                      _context.next = 19;
-                      break;
-                    }
-                    console.log("[PRESTADOR] Procesando mensaje:", content);
-                    _context.next = 17;
-                    return sendEmail(content.mail, content.titulo, content.receptorName);
-                  case 17:
-                    _context.next = 23;
-                    break;
-                  case 19:
-                    if (!(queueName === "operador")) {
-                      _context.next = 23;
-                      break;
-                    }
-                    console.log("[OPERADOR] Procesando mensaje:", content);
-                    _context.next = 23;
-                    return sendEmail(content.mail, content.titulo, content.receptorName);
-                  case 23:
                     canal.ack(message);
                     console.log("[CONSUMER] Mensaje procesado y eliminado de la cola: ".concat(queueName));
-                    _context.next = 31;
+                    _context.next = 19;
                     break;
-                  case 27:
-                    _context.prev = 27;
+                  case 15:
+                    _context.prev = 15;
                     _context.t0 = _context["catch"](1);
                     console.error("[CONSUMER] Error al procesar mensaje en ".concat(queueName, ":"), _context.t0);
                     canal.nack(message, false, false);
-                  case 31:
+                  case 19:
                   case "end":
                     return _context.stop();
                 }
-              }, _callee, null, [[1, 27]]);
+              }, _callee, null, [[1, 15]]);
             }));
             return function (_x3) {
               return _ref.apply(this, arguments);

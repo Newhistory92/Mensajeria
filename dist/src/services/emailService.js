@@ -13,7 +13,7 @@ function sendEmail(_x, _x2, _x3, _x4) {
   return _sendEmail.apply(this, arguments);
 }
 function _sendEmail() {
-  _sendEmail = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(to, titulo, receptorName, mail) {
+  _sendEmail = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(mail, titulo, receptorName, contenido) {
     var destinatario, emailHtml, mailOptions, info;
     return _regeneratorRuntime().wrap(function _callee$(_context) {
       while (1) switch (_context.prev = _context.next) {
@@ -30,8 +30,10 @@ function _sendEmail() {
           _context.next = 6;
           return render(NotificationEmail({
             userFirstName: receptorName,
+            loginDate: new Date(),
             message: "Tienes un nuevo mensaje en tu cuenta de Obra Social Provincia",
-            titulo: titulo
+            titulo: titulo,
+            contenido: contenido
           }));
         case 6:
           emailHtml = _context.sent;

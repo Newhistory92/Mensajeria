@@ -37,27 +37,21 @@ async function consumeQueue(queueName, routingKey) {
                     console.log(`[CONSUMER] Estado actualizado a 'Recibido' para notificación ${content.id}`);
 
                     // Procesar mensaje según el tipo de cola
-                    if (queueName === "afiliado") {
-                        console.log("[AFILIADO] Procesando mensaje:", content);
+                    // console.log('[CONSUMER] Preparando envío de email:', {
+                    //     mail: content.mail,
+                    //     titulo: content.titulo,
+                    //     receptorName: content.receptorName,
+                    //     contenido: content.contenido
+                    // });
+        
+                    if (queueName === "afiliado" || queueName === "prestador" || queueName === "operador") {
                         await sendEmail(
-                            content.mail,
-                            content.titulo,
-                            content.receptorName
+                            content.mail,           
+                            content.titulo,         
+                            content.receptorName,   
+                            content.contenido     
                         );
-                    } else if (queueName === "prestador") {
-                        console.log("[PRESTADOR] Procesando mensaje:", content);
-                        await sendEmail(
-                            content.mail,
-                            content.titulo,
-                            content.receptorName
-                        );
-                    } else if (queueName === "operador") {
-                        console.log("[OPERADOR] Procesando mensaje:", content);
-                        await sendEmail(
-                            content.mail,
-                            content.titulo,
-                            content.receptorName
-                        );
+                        console.log(`[${queueName.toUpperCase()}] Email enviado exitosamente a ${content.mail}`);
                     }
 
                     canal.ack(message);
